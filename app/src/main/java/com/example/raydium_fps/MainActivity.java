@@ -9,6 +9,7 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
@@ -53,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
         tvStatus = findViewById(R.id.textView_Status);
         tvInfo = findViewById(R.id.textView_Info);
         tvRes = findViewById(R.id.textView_Respond);
+        tvRes.setMovementMethod(new ScrollingMovementMethod());
+
         Button btSend = findViewById(R.id.button_Send);
         btSend.setOnClickListener(v -> {
             /*對裝置送出指令*/
@@ -162,11 +165,15 @@ public class MainActivity extends AppCompatActivity {
             /*取得要發送的字串*/
             EditText edInput = findViewById(R.id.editText_Input);
             String s = edInput.getText().toString();
+            byte[] toSend = {(byte) 0x55, (byte) 0xAA, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x63, 0x00, 0x63, 0x01};
+
             if (s.length() == 0) return;
             /*設定胞率、資料長度、停止位元、檢查位元*/
             port.setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
             /*寫出資訊*/
-            port.write(s.getBytes(), 200);
+//            port.write(s.getBytes(), 200);
+            port.write(toSend, 200);
+
             /*設置回傳執行緒*/
             SerialInputOutputManager.Listener serialInputOutputManager = getRespond;
             SerialInputOutputManager sL = new SerialInputOutputManager(port, serialInputOutputManager);
@@ -183,6 +190,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+    private StringBuilder stringBuilder = new StringBuilder();
+
     /**接收回傳*/
     private SerialInputOutputManager.Listener getRespond = new SerialInputOutputManager.Listener() {
         @Override
@@ -190,10 +199,13 @@ public class MainActivity extends AppCompatActivity {
             // String res = "字串回傳： "+new String(data)+"\nByteArray回傳： "+byteArrayToHexStr(data);
             //
 
-            String res = "ByteArray回傳： "+byteArrayToHexStr(data);
+            String res = "ByteArray回傳： " + byteArrayToHexStr(data);
             Log.d(TAG, "回傳: " + res);
+            // 將接收到的 res 添加到 stringBuilder
+            stringBuilder.append(res).append("\n"); // 添加換行符，使每個 res 在新行
+
             runOnUiThread(() -> {
-                tvRes.setText(res);
+                tvRes.setText(stringBuilder);
             });
         }
         @Override
